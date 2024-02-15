@@ -13,12 +13,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 app.get('/notes', (req, res) =>
-    res.sendFile(path.join(__dirname, 'notes.html'))
+    res.sendFile(path.join(__dirname, 'public/notes.html'))
 );
 
-app.get('/api/notes', (req, res) =>
+app.get('/api/notes', (req, res) => {
     console.info(`${req.method} request recieved.`)
-);
+    res.status(200).json(`${req.method} request received to get notes`);
+});
 
 app.post('/api/notes', (req, res) => {
     console.info(`${req.method} request recieved.`)
@@ -32,14 +33,14 @@ app.post('/api/notes', (req, res) => {
             note_id: uuidv4(),
         };
 
-        fs.readFile(path.join('/db' , 'db.json'), 'utf8', (err, data) => {
+        fs.readFile(path.join('db' , 'db.json'), 'utf8', (err, data) => {
             if (err) {
                 console.error(err);
             } else {
                 const parsedNotes = JSON.parse(data);
                 parsedNotes.push(newNote);
                 
-                fs.writeFile(path.join('/db' , 'db.json'), JSON.stringify(parsedNotes, null, 4), (writeErr) => {
+                fs.writeFile(path.join('db' , 'db.json'), JSON.stringify(parsedNotes, null, 4), (writeErr) => {
                     if (writeErr) {
                         console.error(writeErr);
                     } else {
@@ -48,12 +49,20 @@ app.post('/api/notes', (req, res) => {
                 });
             }
         });
+        const response = {
+            status: 'success',
+            body: newNote,
+        };
+        console.log(response);
+        res.status(201).json(response);
     }
-
+    else {
+        res.status(500).json('Error in posting');
+    } 
 });
 
 app.get('*', (req, res) =>
-    res.sendFile(path.join(__dirname, 'index.html'))
+    res.sendFile(path.join(__dirname, 'public/index.html'))
 );
 
 app.listen(PORT, () =>
