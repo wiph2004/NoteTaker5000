@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const notes = require('./db/db.json');
 
 const PORT = process.env.PORT || 3001;
 
@@ -17,9 +18,12 @@ app.get('/notes', (req, res) =>
 );
 
 app.get('/api/notes', (req, res) => {
-    console.info(`${req.method} request recieved.`)
-    res.status(200).json(`${req.method} request received to get notes`);
+    console.info(`${req.method} request recieved for notes.`)
+
+    return res.json(notes);
+
 });
+
 
 app.post('/api/notes', (req, res) => {
     console.info(`${req.method} request recieved.`)
@@ -33,32 +37,55 @@ app.post('/api/notes', (req, res) => {
             note_id: uuidv4(),
         };
 
-        fs.readFile(path.join('db' , 'db.json'), 'utf8', (err, data) => {
-            if (err) {
-                console.error(err);
+        notes.push(newNote);
+
+        fs.writeFile(path.join('db', 'db.json'), JSON.stringify(notes, null, 4), (writeErr) => {
+            if (writeErr) {
+                console.error(writeErr);
             } else {
-                const parsedNotes = JSON.parse(data);
-                parsedNotes.push(newNote);
-                
-                fs.writeFile(path.join('db' , 'db.json'), JSON.stringify(parsedNotes, null, 4), (writeErr) => {
-                    if (writeErr) {
-                        console.error(writeErr);
-                    } else {
-                        console.info('Notes updated');
-                    }
-                });
+                console.info('Notes updated');
+                const response = {
+                    status: 'success',
+                    body: newNote,
+                };
+                console.log(response);
+                res.status(201).json(response);
             }
         });
-        const response = {
-            status: 'success',
-            body: newNote,
-        };
-        console.log(response);
-        res.status(201).json(response);
+
     }
     else {
         res.status(500).json('Error in posting');
-    } 
+    }
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+    console.info(`${req.method} received.`)
+    const id = req.params.id;
+    const noteToDelete = notes.find(el => el.note_id === id);
+    console.log(id + " not to Delete " + noteToDelete)
+
+    if (!noteToDelete) {
+        console.log('Could not find note by id')
+        return res.status(404).json({
+            status: 'fail',
+            message: 'No note with ID ' + id + ' is found'
+        })
+
+    }
+    const index = notes.indexOf(noteToDelete);
+
+    notes.splice(index, 1);
+
+    fs.writeFile(path.join('db', 'db.json'), JSON.stringify(notes, null, 4), (writeErr) => {
+        if (writeErr) {
+            console.error(writeErr);
+        } else {
+            console.info('Notes updated');
+            return res.json(notes);
+        }
+    });
+
 });
 
 app.get('*', (req, res) =>
